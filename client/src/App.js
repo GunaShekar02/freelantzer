@@ -1,43 +1,234 @@
-import React from "react";
-import logo from "./bundle.png";
-import "./App.css";
+import React, { useEffect, useState } from "react";
+import {
+  TezosNodeWriter,
+  TezosParameterFormat,
+  TezosNodeReader,
+} from "conseiljs";
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <h2 className="headerName">Bundle React</h2>
-      </header>
+var key_name = "test_key1";
+var applier = "test_key2";
+var key = require(`../../keystore/${key_name}`);
+var applierKey = require(`../../keystore/${applier}`);
 
-      <a href="https://tezsure.com/">
-        <img className="logo" src={logo} alt="logo" />
-      </a>
-      <div className="container">
-        <div class="row">
-          <div class="col-sm-6">
-            <div class="card">
-              <div class="card-body">
-                <h5 class="card-title">Learn React for the Frontend</h5>
-                <a href="https://reactjs.org/tutorial/tutorial.html" class="btn btn-primary">
-                  Explore ReactJs
-                </a>
-              </div>
-            </div>
-          </div>
-          <div class="col-sm-6">
-            <div class="card">
-              <div class="card-body">
-                <h5 class="card-title">Learn ConseilJs for interacting with Smart Contract</h5>
-                <a href="https://cryptonomic.github.io/ConseilJS/#/" class="btn btn-primary">
-                  Explore ConseilJS
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+var tezosNode = "https://carthagenet.smartpy.io",
+  contractAddress = "KT1QwZc1vGhVKMNDo8nNb8mqJ83eRWRaCz7A";
+
+const App = () => {
+  const [storage, setStorage] = useState([]);
+  const [jobId, setJobId] = useState("");
+  const [candidate, setCandidate] = useState("");
+  const [listLoading, setListLoading] = useState(false);
+  const [applyLoading, setApplyLoading] = useState(false);
+  const [hireLoading, setHireLoading] = useState(false);
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [latestId, setLatestId] = useState("");
+
+  const transferStipend = async (_job_id) => {
+    if (!_job_id) return;
+
+    var keystore = key,
+      amount = 0,
+      fee = 100000,
+      storage_limit = 1000,
+      gas_limit = 200000,
+      entry_point = undefined,
+      parameters = `(Right (Right "${_job_id}"))`,
+      derivation_path = "";
+
+    setSubmitLoading(true);
+    const result = await TezosNodeWriter.sendContractInvocationOperation(
+      tezosNode,
+      keystore,
+      contractAddress,
+      amount,
+      fee,
+      derivation_path,
+      storage_limit,
+      gas_limit,
+      entry_point,
+      parameters,
+      TezosParameterFormat.Michelson
+    );
+    setSubmitLoading(false);
+    setLatestId(result.operationGroupID);
+  };
+
+  const hire = async (_job_id) => {
+    if (!_job_id || !candidate) return;
+
+    var keystore = key,
+      amount = 0,
+      fee = 100000,
+      storage_limit = 1000,
+      gas_limit = 200000,
+      entry_point = undefined,
+      parameters = `(Left (Right (Pair "${candidate}" "${_job_id}")))`,
+      derivation_path = "";
+
+    setHireLoading(true);
+    const result = await TezosNodeWriter.sendContractInvocationOperation(
+      tezosNode,
+      keystore,
+      contractAddress,
+      amount,
+      fee,
+      derivation_path,
+      storage_limit,
+      gas_limit,
+      entry_point,
+      parameters,
+      TezosParameterFormat.Michelson
+    );
+    setHireLoading(false);
+    setLatestId(result.operationGroupID);
+  };
+
+  const apply = async () => {
+    if (!jobId) return;
+
+    var keystore = applierKey,
+      amount = 0,
+      fee = 100000,
+      storage_limit = 1000,
+      gas_limit = 200000,
+      entry_point = undefined,
+      parameters = `(Left (Left (Pair "${jobId}" "Link to resume")))`,
+      derivation_path = "";
+
+    setApplyLoading(true);
+    const result = await TezosNodeWriter.sendContractInvocationOperation(
+      tezosNode,
+      keystore,
+      contractAddress,
+      amount,
+      fee,
+      derivation_path,
+      storage_limit,
+      gas_limit,
+      entry_point,
+      parameters,
+      TezosParameterFormat.Michelson
+    );
+    setApplyLoading(false);
+    setLatestId(result.operationGroupID);
+  };
+
+  const listJob = async () => {
+    var keystore = key,
+      amount = 100,
+      fee = 100000,
+      storage_limit = 1000,
+      gas_limit = 200000,
+      entry_point = undefined,
+      parameters = `(Right (Left (Pair (Pair "Tezos" "+91-9999999999") (Pair "link to jd" "Te${Math.floor(
+        Date.now() / 1000
+      )}"))))`,
+      derivation_path = "";
+    setListLoading(true);
+    const result = await TezosNodeWriter.sendContractInvocationOperation(
+      tezosNode,
+      keystore,
+      contractAddress,
+      amount,
+      fee,
+      derivation_path,
+      storage_limit,
+      gas_limit,
+      entry_point,
+      parameters,
+      TezosParameterFormat.Michelson
+    );
+    setListLoading(false);
+    setLatestId(result?.operationGroupID);
+  };
+
+  const getStorage = async () => {
+    const storage = await TezosNodeReader.getContractStorage(
+      tezosNode,
+      contractAddress
+    );
+    setStorage(storage);
+  };
+
+  useEffect(() => {
+    console.log(key);
+    getStorage();
+  }, []);
+
+  const renderListings = storage.map((job) => (
+    <div>
+      <h4>Job ID : {job.args[0].string}</h4>
+      <p>Company : {job.args[1].args[0].args[0].args[1].string}</p>
+      <p>Contact : {job.args[1].args[0].args[1].args[0].string}</p>
+      <p>
+        Link to Job Description : {job.args[1].args[0].args[1].args[1].string}
+      </p>
+      <p>Owner Address : {job.args[1].args[1].args[0].args[0].string}</p>
+      <p>
+        Status :{" "}
+        {job.args[1].args[1].args[1].args[0].int == 0 ? "Open" : "Closed"}
+      </p>
+      <p>Stipend : {job.args[1].args[1].args[1].args[1].int}mutez</p>
+
+      {job.args[1].args[1].args[1].args[0].int == 1 ? (
+        <>
+          <h5>
+            Selected Candidate :{" "}
+            {job.args[1].args[1].args[0].args[1].args[0].string}
+          </h5>
+          <button onClick={() => transferStipend(job.args[0].string)}>
+            {submitLoading ? "Loading..." : "Transfer Stipend"}
+          </button>
+        </>
+      ) : (
+        <>
+          <h4>Applications : </h4>
+          {job.args[1].args[0].args[0].args[0].map((application) => (
+            <>
+              <p>Account : {application.args[0].string}</p>
+              <p>Resume : {application.args[1].string}</p>
+            </>
+          ))}
+          <h4>Hire Candidate : </h4>
+          <input
+            type="text"
+            placeholder="Enter Account Address"
+            onChange={(e) => setCandidate(e.target.value)}
+          />
+          <button onClick={() => hire(job.args[0].string)}>
+            {hireLoading ? "Loading..." : "Hire"}
+          </button>
+        </>
+      )}
+
+      <hr />
     </div>
+  ));
+  return (
+    <>
+      <h1>FreelanTZer</h1>
+      <hr />
+      <h5>Latest Operations Group ID : {latestId || "No transactions yet!"}</h5>
+      <h5>
+        (Please wait for a few seconds and refresh to view the changes after
+        making a transaction)
+      </h5>
+      <hr />
+      <h2>List a new job</h2>
+      <button onClick={listJob}>{listLoading ? "Loading..." : "List"}</button>
+      <hr />
+      <h2>Apply for a job</h2>
+      <input
+        placeholder="Enter Job ID"
+        type="text"
+        onChange={(e) => setJobId(e.target.value)}
+      />
+      <button onClick={apply}>{applyLoading ? "Loading..." : "Apply"}</button>
+      <hr />
+      <h2>Job listings</h2>
+      {renderListings}
+    </>
   );
-}
+};
 
 export default App;

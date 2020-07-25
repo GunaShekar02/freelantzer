@@ -1,42 +1,82 @@
 import smartpy as sp
 
+# This is the SmartPy editor.
+# You can experiment with SmartPy by loading a template.
+# (in the Commands menu above this editor)
+#
 # A typical SmartPy program has the following form:
 
 # A class of contracts
-class MyContract(sp.Contract):
-    def __init__(self, myParameter1, myParameter2):
-        self.init(myParameter1 = myParameter1,
-                  myParameter2 = myParameter2)
 
-    # An entry point, i.e., a message receiver
-    # (contracts react to messages)
+
+class Freelantzer(sp.Contract):
+    # A job goes through 3 stages:
+    # 0. Listed and open for applications.
+    # 1. An applicant has been hired and applications are closed.
+    # 2. The work is done and stipend has been transferred.
+    def __init__(self):
+        self.init(jobs=sp.big_map(tkey=sp.TString, tvalue=sp.TRecord(owner=sp.TAddress, company=sp.TString, job_description=sp.TString,
+                                                                     stipend=sp.TMutez, contact=sp.TString, status=sp.TInt, applications=sp.TMap(sp.TAddress, sp.TString), selected=sp.TOption(sp.TAddress))))
+
     @sp.entry_point
-    def myEntryPoint(self, params):
-        sp.verify(self.data.myParameter1 <= 123)
-        self.data.myParameter1 += params
+    def list_job(self, _job_id, _company, _job_description, _contact):
+        # Cannot post another job with the same ID
+        sp.verify(~self.data.jobs.contains(_job_id))
+        self.data.jobs[_job_id] = sp.record(owner=sp.source, company=_company, job_description=_job_description,
+                                            stipend=sp.amount, contact=_contact, status=0, applications={}, selected=sp.none)
+
+    @sp.entry_point
+    def apply_for_job(self, _job_id, _resume):
+        self.data.jobs[_job_id].applications[sp.source] = _resume
+
+    @sp.entry_point
+    def hire(self, _job_id, _candidate):
+        # Should be a valid job
+        sp.verify(self.data.jobs.contains(_job_id))
+        # Only owner should be allowed to hire
+        sp.verify(sp.source == self.data.jobs[_job_id].owner)
+        # Status of the contract should be 0
+        sp.verify(self.data.jobs[_job_id].status == 0)
+        # Only 1 person is allowed to be hired, so check if there already exists some other hire
+        sp.verify(~self.data.jobs[_job_id].selected.is_some())
+        self.data.jobs[_job_id].selected = sp.some(_candidate)
+        self.data.jobs[_job_id].status = 1
+
+    @sp.entry_point
+    def submit(self, _job_id):
+        sp.verify(self.data.jobs.contains(_job_id))
+        sp.verify(self.data.jobs[_job_id].status == 1)
+        sp.send(self.data.jobs[_job_id].selected.open_some(),
+                self.data.jobs[_job_id].stipend)
+        del self.data.jobs[_job_id]
 
 # Tests
-@sp.add_test(name = "Welcome")
+@sp.add_test(name="FreelantzerTest")
 def test():
     # We define a test scenario, together with some outputs and checks
     scenario = sp.test_scenario()
+    scenario.h1("FreelantzerTest")
 
     # We first define a contract and add it to the scenario
-    c1 = MyContract(12, 123)
+    c1 = Freelantzer()
     scenario += c1
 
-    # And call some of its entry points
-    scenario += c1.myEntryPoint(12)
-    scenario += c1.myEntryPoint(13)
-    scenario += c1.myEntryPoint(14)
-    scenario += c1.myEntryPoint(50)
-    scenario += c1.myEntryPoint(50)
-    scenario += c1.myEntryPoint(50).run(valid = False) # this is expected to fail
+    lister = sp.test_account("Lister")
+    applier = sp.test_account("Applier")
 
-    # Finally, we check its final storage
-    scenario.verify(c1.data.myParameter1 == 151)
+    scenario += c1.list_job(_job_id="1", _company="Company Name", _job_description="link",
+                            _contact="+91-9999999999").run(source=lister, amount=sp.mutez(1000))
+    scenario += c1.list_job(_job_id="1", _company="Company Name", _job_description="link",
+                            _contact="+91-9999999999").run(source=lister, amount=sp.mutez(1000), valid=False)
 
-    # We can define another contract using the current state of c1
-    c2 = MyContract(1, c1.data.myParameter1)
-    scenario += c2
-    scenario.verify(c2.data.myParameter2 == 151)
+    scenario += c1.apply_for_job(_job_id="1",
+                                 _resume="resume link").run(source=applier)
+    scenario += c1.apply_for_job(_job_id="1",
+                                 _resume="resume link").run(source=applier)
+
+    scenario += c1.hire(_job_id="1",
+                        _candidate=applier.address).run(source=lister)
+
+    scenario.verify(c1.balance == sp.mutez(1000))
+    scenario += c1.submit("1")
+    scenario.verify(c1.balance == sp.mutez(0))
