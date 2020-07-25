@@ -1,6 +1,6 @@
 # FreelanTZer
 
-- FreelanTZer is a Decentralized Application built on top of the Tezos Network. 
+- FreelanTZer is a Decentralized Application for freelancers built on top of the Tezos Network. 
 - It enables users to post jobs, and deposit the stipend amount at the time of listing the job, which is then stored in the contract. 
 - Candidates may apply for the job with their accounts.
 - The job owner will then select candidates suitable for the role.
