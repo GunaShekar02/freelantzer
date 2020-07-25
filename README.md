@@ -20,6 +20,9 @@
 - Currently, everyone is able to see all the jobs and all the applications. Instead, it should be the case that everyone is only able to see the listings on the UI, and owners should be able to see the applicants and applicants should be able to see the jobs they've applied to.
 - Dispute Resolution mechanisms in case any party behaves maliciously.
 - Owners should be able to delete a job if and only if there has been no candidate hired yet.
+- The list operation is currently hard-coded with all the details. Ideally, this input which has the company name, contact, job description etc. should be taken as user input, but has been hard-coded for convenience.
+- The apply operation too is hardcoded, ideally a link to the resume should be submitted by the applicant.
+- Uploading of job description and resumes to IPFS and using those links in the contract storage.
 
 # Prerequisites
 
