@@ -1,0 +1,45 @@
+.header {
+  background-color: #4285f4;
+  padding: 0.5vw;
+  color: white;
+  box-shadow: 0px 1px 15px 3px #ccc;
+  margin-bottom: 30px;
+}
+
+.body {
+  padding: 1vw 2vw;
+}
+
+.button {
+  background-color: #4285f4;
+  color: white;
+  padding: 5px 10px;
+  border: none;
+  outline: none;
+  border-radius: 5px;
+  min-width: 100px;
+}
+
+.input {
+  margin-right: 30px;
+}
+
+.cards_container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-evenly;
+}
+
+.job_card {
+  border: 3px solid #4285f4;
+  border-radius: 10px;
+  width: fit-content;
+  padding: 1vw;
+}
+
+input {
+  border-radius: 10px;
+  outline: none;
+  border: 3px solid #4285f4;
+  padding: 5px 10px;
+}

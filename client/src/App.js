@@ -5,6 +5,8 @@ import {
   TezosNodeReader,
 } from "conseiljs";
 
+import styles from "./App.module.css";
+
 var key_name = "test_key1";
 var applier = "test_key2";
 var key = require(`../../keystore/${key_name}`);
@@ -22,6 +24,15 @@ const App = () => {
   const [hireLoading, setHireLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [latestId, setLatestId] = useState("");
+
+  useEffect(() => {
+    if (latestId)
+      alert(
+        `Operation Group ID : ${latestId}\n
+        Please wait for around a minute for the changes to go through the network and then refresh to see the changes.\n
+        You can copy this ID from the top of the page to explore further.`
+      );
+  }, [latestId]);
 
   const transferStipend = async (_job_id) => {
     if (!_job_id) return;
@@ -156,7 +167,7 @@ const App = () => {
   }, []);
 
   const renderListings = storage.map((job) => (
-    <div>
+    <div className={styles.job_card}>
       <h4>Job ID : {job.args[0].string}</h4>
       <p>Company : {job.args[1].args[0].args[0].args[1].string}</p>
       <p>Contact : {job.args[1].args[0].args[1].args[0].string}</p>
@@ -176,7 +187,10 @@ const App = () => {
             Selected Candidate :{" "}
             {job.args[1].args[1].args[0].args[1].args[0].string}
           </h5>
-          <button onClick={() => transferStipend(job.args[0].string)}>
+          <button
+            onClick={() => transferStipend(job.args[0].string)}
+            className={styles.button}
+          >
             {submitLoading ? "Loading..." : "Transfer Stipend"}
           </button>
         </>
@@ -191,11 +205,15 @@ const App = () => {
           ))}
           <h4>Hire Candidate : </h4>
           <input
+            className={styles.input}
             type="text"
             placeholder="Enter Account Address"
             onChange={(e) => setCandidate(e.target.value)}
           />
-          <button onClick={() => hire(job.args[0].string)}>
+          <button
+            onClick={() => hire(job.args[0].string)}
+            className={styles.button}
+          >
             {hireLoading ? "Loading..." : "Hire"}
           </button>
         </>
@@ -206,27 +224,37 @@ const App = () => {
   ));
   return (
     <>
-      <h1>FreelanTZer</h1>
-      <hr />
-      <h5>Latest Operations Group ID : {latestId || "No transactions yet!"}</h5>
-      <h5>
-        (Please wait for a few seconds and refresh to view the changes after
-        making a transaction)
-      </h5>
-      <hr />
-      <h2>List a new job</h2>
-      <button onClick={listJob}>{listLoading ? "Loading..." : "List"}</button>
-      <hr />
-      <h2>Apply for a job</h2>
-      <input
-        placeholder="Enter Job ID"
-        type="text"
-        onChange={(e) => setJobId(e.target.value)}
-      />
-      <button onClick={apply}>{applyLoading ? "Loading..." : "Apply"}</button>
-      <hr />
-      <h2>Job listings</h2>
-      {renderListings}
+      <div className={styles.header}>
+        <h1>FreelanTZer</h1>
+      </div>
+      <div className={styles.body}>
+        <h5>
+          Latest Operations Group ID : {latestId || "No transactions yet!"}
+        </h5>
+        <h5>
+          (Please wait for a few seconds and refresh to view the changes after
+          making a transaction)
+        </h5>
+        <hr />
+        <h2>List a new job</h2>
+        <button onClick={listJob} className={styles.button}>
+          {listLoading ? "Loading..." : "List"}
+        </button>
+        <hr />
+        <h2>Apply for a job</h2>
+        <input
+          className={styles.input}
+          placeholder="Enter Job ID"
+          type="text"
+          onChange={(e) => setJobId(e.target.value)}
+        />
+        <button onClick={apply} className={styles.button}>
+          {applyLoading ? "Loading..." : "Apply"}
+        </button>
+        <hr />
+        <h2>Job listings</h2>
+        <div className={styles.cards_container}>{renderListings}</div>
+      </div>
     </>
   );
 };
