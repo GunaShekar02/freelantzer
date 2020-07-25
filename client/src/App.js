@@ -9,6 +9,8 @@ import styles from "./App.module.css";
 
 var key_name = "test_key1";
 var applier = "test_key2";
+
+//key is going to be used for listing jobs and applierKey is going to be used for applying for jobs.
 var key = require(`../../keystore/${key_name}`);
 var applierKey = require(`../../keystore/${applier}`);
 
@@ -25,6 +27,7 @@ const App = () => {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [latestId, setLatestId] = useState("");
 
+  //Show an alert with the Operation Group ID whenever a transaction takes place.
   useEffect(() => {
     if (latestId)
       alert(
@@ -34,6 +37,9 @@ const App = () => {
       );
   }, [latestId]);
 
+  //The functions have been written in the reverse order of their chronological execution.
+
+  //The final step in the process is to transfer the stipend amount from the contract to the selected candidate.
   const transferStipend = async (_job_id) => {
     if (!_job_id) return;
 
@@ -64,6 +70,7 @@ const App = () => {
     setLatestId(result.operationGroupID);
   };
 
+  //Hire a particular candidate for a particular job.
   const hire = async (_job_id) => {
     if (!_job_id || !candidate) return;
 
@@ -94,6 +101,7 @@ const App = () => {
     setLatestId(result.operationGroupID);
   };
 
+  //Apply for a particular job
   const apply = async () => {
     if (!jobId) return;
 
@@ -124,6 +132,7 @@ const App = () => {
     setLatestId(result.operationGroupID);
   };
 
+  //List a job and transfer the stipend amount to the contract
   const listJob = async () => {
     var keystore = key,
       amount = 100,
@@ -153,6 +162,7 @@ const App = () => {
     setLatestId(result?.operationGroupID);
   };
 
+  //Get the current contract storage
   const getStorage = async () => {
     const storage = await TezosNodeReader.getContractStorage(
       tezosNode,
@@ -161,11 +171,12 @@ const App = () => {
     setStorage(storage);
   };
 
+  //Fetch the storage everytime the component is mounted
   useEffect(() => {
-    console.log(key);
     getStorage();
   }, []);
 
+  //UI for Job Cards
   const renderListings = storage.map((job) => (
     <div className={styles.job_card}>
       <h4>Job ID : {job.args[0].string}</h4>
@@ -222,6 +233,7 @@ const App = () => {
       <hr />
     </div>
   ));
+
   return (
     <>
       <div className={styles.header}>

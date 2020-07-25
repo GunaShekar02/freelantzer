@@ -1,23 +1,20 @@
 import smartpy as sp
 
-# This is the SmartPy editor.
-# You can experiment with SmartPy by loading a template.
-# (in the Commands menu above this editor)
-#
-# A typical SmartPy program has the following form:
-
-# A class of contracts
-
 
 class Freelantzer(sp.Contract):
     # A job goes through 3 stages:
     # 0. Listed and open for applications.
     # 1. An applicant has been hired and applications are closed.
     # 2. The work is done and stipend has been transferred.
+
+    # The only state to be maintained is the jobs map. It maps a Job ID to its details.
+    # The value is a record containing owner of the job, company name, link to job description, stipend amount for the job, contact number/email, status of the job(0,1,2), a map of applications, address of selected candidate.
+    # Applicants is a map with key as address of the applicant and value as their resume. It's a map and not a list in order to facilitate O(1) lookups for applications.
     def __init__(self):
         self.init(jobs=sp.big_map(tkey=sp.TString, tvalue=sp.TRecord(owner=sp.TAddress, company=sp.TString, job_description=sp.TString,
                                                                      stipend=sp.TMutez, contact=sp.TString, status=sp.TInt, applications=sp.TMap(sp.TAddress, sp.TString), selected=sp.TOption(sp.TAddress))))
 
+    # An _ has been used in front of private variables as per convention.
     @sp.entry_point
     def list_job(self, _job_id, _company, _job_description, _contact):
         # Cannot post another job with the same ID
@@ -44,7 +41,9 @@ class Freelantzer(sp.Contract):
 
     @sp.entry_point
     def submit(self, _job_id):
+        # Should be a valid job
         sp.verify(self.data.jobs.contains(_job_id))
+        # Status 1 indicates that a candidate has been selected, so the status should be 1
         sp.verify(self.data.jobs[_job_id].status == 1)
         sp.send(self.data.jobs[_job_id].selected.open_some(),
                 self.data.jobs[_job_id].stipend)
