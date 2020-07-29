@@ -142,17 +142,106 @@ const ListJobModal = ({ showListJobModal, setListJobModal, setLatestId }) => {
   );
 };
 
+const ApplyModal = ({ showApplyModal, setApplyModal, setLatestId, jobId }) => {
+  const [keystore, setKeystore] = useState({
+    publicKey: "",
+    privateKey: "",
+    publicKeyHash: "",
+    seed: "",
+    storeType: StoreType.Fundraiser,
+  });
+  const [resume, setResume] = useState("");
+  const [applyLoading, setApplyLoading] = useState(false);
+
+  const handleKeystoreChange = ({ target: { name, value } }) => {
+    setKeystore({
+      ...keystore,
+      [name]: value,
+    });
+  };
+
+  //Apply for a particular job
+  const apply = async () => {
+    if (!jobId) return;
+
+    var amount = 0,
+      fee = 100000,
+      storage_limit = 1000,
+      gas_limit = 200000,
+      entry_point = undefined,
+      parameters = `(Left (Left (Pair "${jobId}" "${resume}")))`,
+      derivation_path = "";
+
+    setApplyLoading(true);
+    const result = await TezosNodeWriter.sendContractInvocationOperation(
+      tezosNode,
+      keystore,
+      contractAddress,
+      amount,
+      fee,
+      derivation_path,
+      storage_limit,
+      gas_limit,
+      entry_point,
+      parameters,
+      TezosParameterFormat.Michelson
+    );
+    setApplyLoading(false);
+    setLatestId(result.operationGroupID);
+    setApplyModal(false);
+  };
+
+  return (
+    <Modal show={showApplyModal} setShow={setApplyModal}>
+      <div className={styles.modal_container}>
+        <input
+          type="text"
+          placeholder="Public Key"
+          name="publicKey"
+          value={keystore.publicKey}
+          onChange={handleKeystoreChange}
+        />
+        <input
+          type="text"
+          placeholder="Private Key"
+          name="privateKey"
+          value={keystore.privateKey}
+          onChange={handleKeystoreChange}
+        />
+        <input
+          type="text"
+          placeholder="Public Key Hash(Address)"
+          name="publicKeyHash"
+          value={keystore.publicKeyHash}
+          onChange={handleKeystoreChange}
+        />
+        <input
+          type="text"
+          placeholder="Link to Resume"
+          name="resume"
+          value={resume}
+          onChange={({ target: { value } }) => setResume(value)}
+        />
+        <button className={styles.button} onClick={apply}>
+          {applyLoading ? "Loading..." : "Apply"}
+        </button>
+      </div>
+    </Modal>
+  );
+};
+
 const App = () => {
   const [storage, setStorage] = useState([]);
   const [jobId, setJobId] = useState("");
   const [candidate, setCandidate] = useState("");
   const [listLoading, setListLoading] = useState(false);
-  const [applyLoading, setApplyLoading] = useState(false);
   const [hireLoading, setHireLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [latestId, setLatestId] = useState("");
 
   const [showListJobModal, setListJobModal] = useState(false);
+  const [showApplyModal, setApplyModal] = useState(false);
+  const [jobToApply, setJobToApply] = useState();
 
   //Show an alert with the Operation Group ID whenever a transaction takes place.
   useEffect(() => {
@@ -228,37 +317,6 @@ const App = () => {
     setLatestId(result.operationGroupID);
   };
 
-  //Apply for a particular job
-  const apply = async () => {
-    if (!jobId) return;
-
-    var keystore = applierKey,
-      amount = 0,
-      fee = 100000,
-      storage_limit = 1000,
-      gas_limit = 200000,
-      entry_point = undefined,
-      parameters = `(Left (Left (Pair "${jobId}" "Link to resume")))`,
-      derivation_path = "";
-
-    setApplyLoading(true);
-    const result = await TezosNodeWriter.sendContractInvocationOperation(
-      tezosNode,
-      keystore,
-      contractAddress,
-      amount,
-      fee,
-      derivation_path,
-      storage_limit,
-      gas_limit,
-      entry_point,
-      parameters,
-      TezosParameterFormat.Michelson
-    );
-    setApplyLoading(false);
-    setLatestId(result.operationGroupID);
-  };
-
   //Get the current contract storage
   const getStorage = async () => {
     const storage = await TezosNodeReader.getContractStorage(
@@ -274,62 +332,72 @@ const App = () => {
   }, []);
 
   //UI for Job Cards
-  const renderListings = storage.map((job) => (
-    <div className={styles.job_card}>
-      <h4>Job ID : {job.args[0].string}</h4>
-      <p>Company : {job.args[1].args[0].args[0].args[1].string}</p>
-      <p>Contact : {job.args[1].args[0].args[1].args[0].string}</p>
-      <p>
-        Link to Job Description : {job.args[1].args[0].args[1].args[1].string}
-      </p>
-      <p>Owner Address : {job.args[1].args[1].args[0].args[0].string}</p>
-      <p>
-        Status :{" "}
-        {job.args[1].args[1].args[1].args[0].int == 0 ? "Open" : "Closed"}
-      </p>
-      <p>Stipend : {job.args[1].args[1].args[1].args[1].int}mutez</p>
+  const renderListings = storage
+    .filter((job) => job.args[1].args[1].args[1].args[0].int == 0)
+    .map((job) => (
+      <div className={styles.job_card}>
+        <h4>Job ID : {job.args[0].string}</h4>
+        <p>Company : {job.args[1].args[0].args[0].args[1].string}</p>
+        <p>Contact : {job.args[1].args[0].args[1].args[0].string}</p>
+        <p>
+          Link to Job Description : {job.args[1].args[0].args[1].args[1].string}
+        </p>
+        <p>Owner Address : {job.args[1].args[1].args[0].args[0].string}</p>
+        <p>
+          Status :{" "}
+          {job.args[1].args[1].args[1].args[0].int == 0 ? "Open" : "Closed"}
+        </p>
+        <p>Stipend : {job.args[1].args[1].args[1].args[1].int}mutez</p>
+        <button
+          className={styles.button}
+          onClick={() => {
+            setJobToApply(job.args[0].string);
+            setApplyModal(true);
+          }}
+        >
+          Apply
+        </button>
+        {job.args[1].args[1].args[1].args[0].int == 1 ? (
+          <>
+            <h5>
+              Selected Candidate :{" "}
+              {job.args[1].args[1].args[0].args[1].args[0].string}
+            </h5>
+            <button
+              onClick={() => transferStipend(job.args[0].string)}
+              className={styles.button}
+            >
+              {submitLoading ? "Loading..." : "Transfer Stipend"}
+            </button>
+          </>
+        ) : (
+          <>
+            <h4>Applications : </h4>
+            {job.args[1].args[0].args[0].args[0].map((application) => (
+              <>
+                <p>Account : {application.args[0].string}</p>
+                <p>Resume : {application.args[1].string}</p>
+              </>
+            ))}
+            <h4>Hire Candidate : </h4>
+            <input
+              className={styles.input}
+              type="text"
+              placeholder="Enter Account Address"
+              onChange={(e) => setCandidate(e.target.value)}
+            />
+            <button
+              onClick={() => hire(job.args[0].string)}
+              className={styles.button}
+            >
+              {hireLoading ? "Loading..." : "Hire"}
+            </button>
+          </>
+        )}
 
-      {job.args[1].args[1].args[1].args[0].int == 1 ? (
-        <>
-          <h5>
-            Selected Candidate :{" "}
-            {job.args[1].args[1].args[0].args[1].args[0].string}
-          </h5>
-          <button
-            onClick={() => transferStipend(job.args[0].string)}
-            className={styles.button}
-          >
-            {submitLoading ? "Loading..." : "Transfer Stipend"}
-          </button>
-        </>
-      ) : (
-        <>
-          <h4>Applications : </h4>
-          {job.args[1].args[0].args[0].args[0].map((application) => (
-            <>
-              <p>Account : {application.args[0].string}</p>
-              <p>Resume : {application.args[1].string}</p>
-            </>
-          ))}
-          <h4>Hire Candidate : </h4>
-          <input
-            className={styles.input}
-            type="text"
-            placeholder="Enter Account Address"
-            onChange={(e) => setCandidate(e.target.value)}
-          />
-          <button
-            onClick={() => hire(job.args[0].string)}
-            className={styles.button}
-          >
-            {hireLoading ? "Loading..." : "Hire"}
-          </button>
-        </>
-      )}
-
-      <hr />
-    </div>
-  ));
+        <hr />
+      </div>
+    ));
 
   return (
     <>
@@ -337,6 +405,12 @@ const App = () => {
         showListJobModal={showListJobModal}
         setListJobModal={setListJobModal}
         setLatestId={setLatestId}
+      />
+      <ApplyModal
+        showApplyModal={showApplyModal}
+        setApplyModal={setApplyModal}
+        setLatestId={setLatestId}
+        jobId={jobToApply}
       />
       <div className={styles.header}>
         <h1>FreelanTZer</h1>
@@ -355,7 +429,7 @@ const App = () => {
           {listLoading ? "Loading..." : "List"}
         </button>
         <hr />
-        <h2>Apply for a job</h2>
+        {/* <h2>Apply for a job</h2>
         <input
           className={styles.input}
           placeholder="Enter Job ID"
@@ -365,7 +439,7 @@ const App = () => {
         <button onClick={apply} className={styles.button}>
           {applyLoading ? "Loading..." : "Apply"}
         </button>
-        <hr />
+        <hr /> */}
         <h2>Job listings</h2>
         <div className={styles.cards_container}>{renderListings}</div>
       </div>
