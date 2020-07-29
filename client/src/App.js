@@ -3,7 +3,10 @@ import {
   TezosNodeWriter,
   TezosParameterFormat,
   TezosNodeReader,
+  StoreType,
 } from "conseiljs";
+
+import Modal from "./Components/Modal/Modal";
 
 import styles from "./App.module.css";
 
@@ -15,7 +18,129 @@ var key = require(`../../keystore/${key_name}`);
 var applierKey = require(`../../keystore/${applier}`);
 
 var tezosNode = "https://carthagenet.smartpy.io",
-  contractAddress = "KT1QwZc1vGhVKMNDo8nNb8mqJ83eRWRaCz7A";
+  contractAddress = "KT1A8cTdb9a81RdQdbEBAv3EjoutQtVVscY5";
+
+const ListJobModal = ({ showListJobModal, setListJobModal, setLatestId }) => {
+  const [keystore, setKeystore] = useState({
+    publicKey: "",
+    privateKey: "",
+    publicKeyHash: "",
+    seed: "",
+    storeType: StoreType.Fundraiser,
+  });
+  const [jobDetails, setJobDetails] = useState({
+    company: "",
+    contact: "",
+    jd: "",
+    stipend: undefined,
+  });
+  const [listLoading, setListLoading] = useState(false);
+
+  const handleKeystoreChange = ({ target: { name, value } }) => {
+    setKeystore({
+      ...keystore,
+      [name]: value,
+    });
+  };
+
+  const handleJobDetailsChange = ({ target: { name, value } }) => {
+    setJobDetails({
+      ...jobDetails,
+      [name]: value,
+    });
+  };
+
+  //List a job and transfer the stipend amount to the contract
+  const listJob = async () => {
+    var amount = jobDetails.stipend,
+      fee = 100000,
+      storage_limit = 1000,
+      gas_limit = 200000,
+      entry_point = undefined,
+      parameters = `(Right (Left (Pair (Pair "${jobDetails.company}" "${
+        jobDetails.contact
+      }") (Pair "${jobDetails.jd}" "${jobDetails.company
+        .slice(0, 3)
+        .toUpperCase()}${Math.floor(Date.now() / 1000)}"))))`,
+      derivation_path = "";
+    setListLoading(true);
+    const result = await TezosNodeWriter.sendContractInvocationOperation(
+      tezosNode,
+      keystore,
+      contractAddress,
+      amount,
+      fee,
+      derivation_path,
+      storage_limit,
+      gas_limit,
+      entry_point,
+      parameters,
+      TezosParameterFormat.Michelson
+    );
+    setListLoading(false);
+    setLatestId(result?.operationGroupID);
+    setListJobModal(false);
+  };
+
+  return (
+    <Modal show={showListJobModal} setShow={setListJobModal}>
+      <div className={styles.modal_container}>
+        <input
+          type="text"
+          placeholder="Public Key"
+          name="publicKey"
+          value={keystore.publicKey}
+          onChange={handleKeystoreChange}
+        />
+        <input
+          type="text"
+          placeholder="Private Key"
+          name="privateKey"
+          value={keystore.privateKey}
+          onChange={handleKeystoreChange}
+        />
+        <input
+          type="text"
+          placeholder="Public Key Hash(Address)"
+          name="publicKeyHash"
+          value={keystore.publicKeyHash}
+          onChange={handleKeystoreChange}
+        />
+        <input
+          type="text"
+          placeholder="Company Name"
+          name="company"
+          value={jobDetails.company}
+          onChange={handleJobDetailsChange}
+        />
+        <input
+          type="text"
+          placeholder="Contact"
+          name="contact"
+          value={jobDetails.contact}
+          onChange={handleJobDetailsChange}
+        />
+        <input
+          type="text"
+          placeholder="Link to Job Description"
+          name="jd"
+          value={jobDetails.jd}
+          onChange={handleJobDetailsChange}
+        />
+        <input
+          type="text"
+          placeholder="Stipend (in mutez)"
+          name="stipend"
+          value={jobDetails.stipend}
+          onChange={handleJobDetailsChange}
+        />
+        <button className={styles.button} onClick={listJob}>
+          {listLoading ? "Loading..." : "List"}
+        </button>
+      </div>
+    </Modal>
+  );
+};
 
 const App = () => {
   const [storage, setStorage] = useState([]);
@@ -26,6 +151,8 @@ const App = () => {
   const [hireLoading, setHireLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [latestId, setLatestId] = useState("");
+
+  const [showListJobModal, setListJobModal] = useState(false);
 
   //Show an alert with the Operation Group ID whenever a transaction takes place.
   useEffect(() => {
@@ -132,36 +259,6 @@ const App = () => {
     setLatestId(result.operationGroupID);
   };
 
-  //List a job and transfer the stipend amount to the contract
-  const listJob = async () => {
-    var keystore = key,
-      amount = 100,
-      fee = 100000,
-      storage_limit = 1000,
-      gas_limit = 200000,
-      entry_point = undefined,
-      parameters = `(Right (Left (Pair (Pair "Tezos" "+91-9999999999") (Pair "link to jd" "Te${Math.floor(
-        Date.now() / 1000
-      )}"))))`,
-      derivation_path = "";
-    setListLoading(true);
-    const result = await TezosNodeWriter.sendContractInvocationOperation(
-      tezosNode,
-      keystore,
-      contractAddress,
-      amount,
-      fee,
-      derivation_path,
-      storage_limit,
-      gas_limit,
-      entry_point,
-      parameters,
-      TezosParameterFormat.Michelson
-    );
-    setListLoading(false);
-    setLatestId(result?.operationGroupID);
-  };
-
   //Get the current contract storage
   const getStorage = async () => {
     const storage = await TezosNodeReader.getContractStorage(
@@ -236,6 +333,11 @@ const App = () => {
 
   return (
     <>
+      <ListJobModal
+        showListJobModal={showListJobModal}
+        setListJobModal={setListJobModal}
+        setLatestId={setLatestId}
+      />
       <div className={styles.header}>
         <h1>FreelanTZer</h1>
       </div>
@@ -249,7 +351,7 @@ const App = () => {
         </h5>
         <hr />
         <h2>List a new job</h2>
-        <button onClick={listJob} className={styles.button}>
+        <button onClick={() => setListJobModal(true)} className={styles.button}>
           {listLoading ? "Loading..." : "List"}
         </button>
         <hr />
