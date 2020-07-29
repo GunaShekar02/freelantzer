@@ -34,6 +34,7 @@
 - Clone the repository.
 - Run ```npm i``` to install the dependencies required.
 - Run ```npm run client-install``` to install client dependencies for React.
+- Run ```npm run dapp``` to start the React App.
 - Click on list to execute a job listing function. Once the transaction is sent, you'll see an operation group ID at the top, which you can then explore on https://carthagenet.tzstats.com/. Please give a few seconds(30 - 60) for the transaction to be registered on the chain and refresh to see the changes.
 - The next step is to apply for a job, copy the ID of the job you recently listed and paste it in the input box in the Apply for jobs section and click on Apply. Please give a few seconds(30 - 60) for the transaction to be registered on the chain and refresh to see the changes.
 - After applying, you may go ahead and hire that candidate for the role. You'll find the list of applicants for a role, which has their account address. Copy this account address and enter it into the Hire input box and click on Hire.
