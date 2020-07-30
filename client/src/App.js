@@ -292,37 +292,6 @@ const App = () => {
     setLatestId(result.operationGroupID);
   };
 
-  //Hire a particular candidate for a particular job.
-  const hire = async (_job_id) => {
-    if (!_job_id || !candidate) return;
-
-    var keystore = key,
-      amount = 0,
-      fee = 100000,
-      storage_limit = 1000,
-      gas_limit = 200000,
-      entry_point = undefined,
-      parameters = `(Left (Right (Pair "${candidate}" "${_job_id}")))`,
-      derivation_path = "";
-
-    setHireLoading(true);
-    const result = await TezosNodeWriter.sendContractInvocationOperation(
-      tezosNode,
-      keystore,
-      contractAddress,
-      amount,
-      fee,
-      derivation_path,
-      storage_limit,
-      gas_limit,
-      entry_point,
-      parameters,
-      TezosParameterFormat.Michelson
-    );
-    setHireLoading(false);
-    setLatestId(result.operationGroupID);
-  };
-
   //Get the current contract storage
   const getStorage = async () => {
     const storage = await TezosNodeReader.getContractStorage(
@@ -330,6 +299,7 @@ const App = () => {
       contractAddress
     );
     setStorage(storage);
+    console.log(storage);
   };
 
   //Fetch the storage everytime the component is mounted
@@ -363,45 +333,6 @@ const App = () => {
         >
           Apply
         </button>
-        {job.args[1].args[1].args[1].args[0].int == 1 ? (
-          <>
-            <h5>
-              Selected Candidate :{" "}
-              {job.args[1].args[1].args[0].args[1].args[0].string}
-            </h5>
-            <button
-              onClick={() => transferStipend(job.args[0].string)}
-              className={styles.button}
-            >
-              {submitLoading ? "Loading..." : "Transfer Stipend"}
-            </button>
-          </>
-        ) : (
-          <>
-            <h4>Applications : </h4>
-            {job.args[1].args[0].args[0].args[0].map((application) => (
-              <>
-                <p>Account : {application.args[0].string}</p>
-                <p>Resume : {application.args[1].string}</p>
-              </>
-            ))}
-            <h4>Hire Candidate : </h4>
-            <input
-              className={styles.input}
-              type="text"
-              placeholder="Enter Account Address"
-              onChange={(e) => setCandidate(e.target.value)}
-            />
-            <button
-              onClick={() => hire(job.args[0].string)}
-              className={styles.button}
-            >
-              {hireLoading ? "Loading..." : "Hire"}
-            </button>
-          </>
-        )}
-
-        <hr />
       </div>
     ));
 
@@ -456,10 +387,10 @@ const App = () => {
           </div>
         </Route>
         <Route exact path="/myjobs">
-          <MyJobs />
+          <MyJobs storage={storage} />
         </Route>
         <Route exact path="/myapplications">
-          <MyApplications />
+          <MyApplications storage={storage} />
         </Route>
       </Switch>
     </>
