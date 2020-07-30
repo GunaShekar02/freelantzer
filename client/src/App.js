@@ -5,6 +5,10 @@ import {
   TezosNodeReader,
   StoreType,
 } from "conseiljs";
+import { Route, Switch, useHistory } from "react-router-dom";
+
+import MyJobs from "./Containers/MyJobs/MyJobs";
+import MyApplications from "./Containers/MyApplications/MyApplications";
 
 import Modal from "./Components/Modal/Modal";
 
@@ -243,6 +247,8 @@ const App = () => {
   const [showApplyModal, setApplyModal] = useState(false);
   const [jobToApply, setJobToApply] = useState();
 
+  const history = useHistory();
+
   //Show an alert with the Operation Group ID whenever a transaction takes place.
   useEffect(() => {
     if (latestId)
@@ -401,48 +407,61 @@ const App = () => {
 
   return (
     <>
-      <ListJobModal
-        showListJobModal={showListJobModal}
-        setListJobModal={setListJobModal}
-        setLatestId={setLatestId}
-      />
-      <ApplyModal
-        showApplyModal={showApplyModal}
-        setApplyModal={setApplyModal}
-        setLatestId={setLatestId}
-        jobId={jobToApply}
-      />
       <div className={styles.header}>
-        <h1>FreelanTZer</h1>
+        <div>
+          <h1 onClick={() => history.push("/")} className={styles.brand}>
+            FreelanTZer
+          </h1>
+        </div>
+        <div className={styles.nav}>
+          <h3 onClick={() => history.push("/myjobs")}>My Job Listings</h3>
+          <h3 onClick={() => history.push("/myapplications")}>
+            My Applications
+          </h3>
+        </div>
       </div>
-      <div className={styles.body}>
-        <h5>
-          Latest Operations Group ID : {latestId || "No transactions yet!"}
-        </h5>
-        <h5>
-          (Please wait for a few seconds and refresh to view the changes after
-          making a transaction)
-        </h5>
-        <hr />
-        <h2>List a new job</h2>
-        <button onClick={() => setListJobModal(true)} className={styles.button}>
-          {listLoading ? "Loading..." : "List"}
-        </button>
-        <hr />
-        {/* <h2>Apply for a job</h2>
-        <input
-          className={styles.input}
-          placeholder="Enter Job ID"
-          type="text"
-          onChange={(e) => setJobId(e.target.value)}
-        />
-        <button onClick={apply} className={styles.button}>
-          {applyLoading ? "Loading..." : "Apply"}
-        </button>
-        <hr /> */}
-        <h2>Job listings</h2>
-        <div className={styles.cards_container}>{renderListings}</div>
-      </div>
+      <Switch>
+        <Route exact path="/">
+          <ListJobModal
+            showListJobModal={showListJobModal}
+            setListJobModal={setListJobModal}
+            setLatestId={setLatestId}
+          />
+          <ApplyModal
+            showApplyModal={showApplyModal}
+            setApplyModal={setApplyModal}
+            setLatestId={setLatestId}
+            jobId={jobToApply}
+          />
+
+          <div className={styles.body}>
+            <h5>
+              Latest Operations Group ID : {latestId || "No transactions yet!"}
+            </h5>
+            <h5>
+              (Please wait for a few seconds and refresh to view the changes
+              after making a transaction)
+            </h5>
+            <hr />
+            <h2>List a new job</h2>
+            <button
+              onClick={() => setListJobModal(true)}
+              className={styles.button}
+            >
+              {listLoading ? "Loading..." : "List"}
+            </button>
+            <hr />
+            <h2>Job listings</h2>
+            <div className={styles.cards_container}>{renderListings}</div>
+          </div>
+        </Route>
+        <Route exact path="/myjobs">
+          <MyJobs />
+        </Route>
+        <Route exact path="/myapplications">
+          <MyApplications />
+        </Route>
+      </Switch>
     </>
   );
 };

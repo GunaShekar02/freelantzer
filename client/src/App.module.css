@@ -4,6 +4,27 @@
   color: white;
   box-shadow: 0px 1px 15px 3px #ccc;
   margin-bottom: 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.nav {
+  display: flex;
+}
+
+.nav > h3 {
+  margin-right: 30px;
+  transition: all 0.3s ease-in;
+  cursor: pointer;
+}
+
+.nav > h3:hover {
+  text-decoration: underline;
+}
+
+.brand {
+  cursor: pointer;
 }
 
 .body {
