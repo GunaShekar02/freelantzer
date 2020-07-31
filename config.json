@@ -1,7 +1,7 @@
 {
   "compile_config": {
     "contract_name": "demo.py",
-    "class_name": "Freelantzer"
+    "class_name": "Freelantzer()"
   },
   "test_config": {
     "contract_name": "demo.py",

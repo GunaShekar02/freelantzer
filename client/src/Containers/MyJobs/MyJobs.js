@@ -11,7 +11,7 @@ import Modal from "../../Components/Modal/Modal";
 import styles from "./MyJobs.module.css";
 
 var tezosNode = "https://carthagenet.smartpy.io",
-  contractAddress = "KT1A8cTdb9a81RdQdbEBAv3EjoutQtVVscY5";
+  contractAddress = "KT1UgY1azx3rSTkgafWn6jHQo1VQ2C5Dau9Q";
 
 const HireModal = ({
   showHireModal,
@@ -27,6 +27,7 @@ const HireModal = ({
     seed: "",
     storeType: StoreType.Fundraiser,
   });
+  const [offerLetter, setOfferLetter] = useState("");
   const [hireLoading, setHireLoading] = useState(false);
 
   const handleKeystoreChange = ({ target: { name, value } }) => {
@@ -37,15 +38,15 @@ const HireModal = ({
   };
 
   //Hire a particular candidate for a particular job.
-  const hire = async (_job_id) => {
-    if (!_job_id || !candidate) return;
+  const hire = async () => {
+    if (!jobId || !candidate) return;
 
     var amount = 0,
       fee = 100000,
       storage_limit = 1000,
       gas_limit = 200000,
       entry_point = undefined,
-      parameters = `(Left (Right (Pair "${candidate}" "${jobId}")))`,
+      parameters = `(Left (Right (Pair "${candidate}" (Pair "${jobId}" "${offerLetter}"))))`,
       derivation_path = "";
 
     setHireLoading(true);
@@ -92,6 +93,13 @@ const HireModal = ({
           value={keystore.publicKeyHash}
           onChange={handleKeystoreChange}
         />
+        <input
+          type="text"
+          placeholder="Offer Letter Link"
+          name="oferrLetter"
+          value={offerLetter}
+          onChange={({ target: { value } }) => setOfferLetter(value)}
+        />
         <button className={styles.button} onClick={hire}>
           {hireLoading ? "Loading..." : "Hire"}
         </button>
@@ -105,6 +113,7 @@ const TransferModal = ({
   setTransferModal,
   setLatestId,
   jobId,
+  candidate,
 }) => {
   const [keystore, setKeystore] = useState({
     publicKey: "",
@@ -131,7 +140,7 @@ const TransferModal = ({
       storage_limit = 1000,
       gas_limit = 200000,
       entry_point = undefined,
-      parameters = `(Right (Right "${jobId}"))`,
+      parameters = `(Right (Right (Pair "${candidate}" "${jobId}")))`,
       derivation_path = "";
 
     setTransferLoading(true);
@@ -150,6 +159,7 @@ const TransferModal = ({
     );
     setTransferLoading(false);
     setLatestId(result.operationGroupID);
+    setTransferModal(false);
   };
 
   return (
@@ -193,7 +203,10 @@ const MyJobs = ({ storage }) => {
     candidate: "",
   });
   const [showTransferModal, setTransferModal] = useState(false);
-  const [transferJobId, setTransferJobId] = useState("");
+  const [transferJobDetails, setTransferJobDetails] = useState({
+    jobId: "",
+    candidate: "",
+  });
 
   useEffect(() => {
     if (latestId)
@@ -205,61 +218,68 @@ const MyJobs = ({ storage }) => {
   }, [latestId]);
 
   const renderListings = storage
-    .filter((job) => job.args[1].args[1].args[0].args[0].string == address)
+    .filter((job) => job.args[1].args[1].args[0].args[1].string == address)
     .map((job) => (
       <div className={styles.job_card}>
         <h4>Job ID : {job.args[0].string}</h4>
         <p>Company : {job.args[1].args[0].args[0].args[1].string}</p>
         <p>Contact : {job.args[1].args[0].args[1].args[0].string}</p>
         <p>
-          Link to Job Description : {job.args[1].args[0].args[1].args[1].string}
+          Link to Job Description :{" "}
+          {job.args[1].args[0].args[1].args[1].args[1].string}
         </p>
-        <p>Owner Address : {job.args[1].args[1].args[0].args[0].string}</p>
+        <p>Owner Address : {job.args[1].args[1].args[0].args[1].string}</p>
         <p>
           Status :{" "}
-          {job.args[1].args[1].args[1].args[0].int == 0 ? "Open" : "Closed"}
+          {job.args[1].args[1].args[1].args[1].args[0].int == 0
+            ? "Open"
+            : "Closed"}
         </p>
-        <p>Stipend : {job.args[1].args[1].args[1].args[1].int}mutez</p>
-        {job.args[1].args[1].args[1].args[0].int == 1 ? (
-          <>
-            <h5>
-              Selected Candidate :{" "}
-              {job.args[1].args[1].args[0].args[1].args[0].string}
-            </h5>
-            <button
-              onClick={() => {
-                setTransferJobId(job.args[0].string);
-                setTransferModal(true);
-              }}
-              className={styles.button}
-            >
-              Transfer Stipend
-            </button>
-          </>
-        ) : (
-          <>
-            <h4>Applications : </h4>
-            {job.args[1].args[0].args[0].args[0].map((application) => (
-              <>
-                <p>Account : {application.args[0].string}</p>
-                <p>Resume : {application.args[1].string}</p>
-                <button
-                  className={styles.button}
-                  onClick={() => {
-                    setDetails({
-                      jobId: job.args[0].string,
-                      candidate: application.args[0].string,
-                    });
-                    setHireModal(true);
-                  }}
-                >
-                  Hire
-                </button>
-                <hr />
-              </>
-            ))}
-          </>
-        )}
+        <p>Stipend : {job.args[1].args[1].args[1].args[1].args[1].int}mutez</p>
+        <>
+          <h5>Selected Candidates : </h5>
+          {job.args[1].args[1].args[1].args[0].map((selected) => (
+            <>
+              <p>Account : {selected.args[0].string}</p>
+              <p>Resume : {selected.args[1].string}</p>
+              <button
+                onClick={() => {
+                  setTransferJobDetails({
+                    jobId: job.args[0].string,
+                    candidate: selected.args[0].string,
+                  });
+                  setTransferModal(true);
+                }}
+                className={styles.button}
+              >
+                Transfer Stipend
+              </button>
+              <hr />
+            </>
+          ))}
+        </>
+        <>
+          <h4>Applications : </h4>
+          {job.args[1].args[0].args[0].args[0].map((application) => (
+            <>
+              <p>Account : {application.args[0].string}</p>
+              <p>Resume : {application.args[1].string}</p>
+              <button
+                className={styles.button}
+                onClick={() => {
+                  setDetails({
+                    jobId: job.args[0].string,
+                    candidate: application.args[0].string,
+                  });
+                  setHireModal(true);
+                }}
+              >
+                Hire
+              </button>
+              <hr />
+            </>
+          ))}
+        </>
       </div>
     ));
 
@@ -276,7 +296,8 @@ const MyJobs = ({ storage }) => {
         showTransferModal={showTransferModal}
         setTransferModal={setTransferModal}
         setLatestId={setLatestId}
-        jobId={transferJobId}
+        jobId={transferJobDetails.jobId}
+        candidate={transferJobDetails.candidate}
       />
       <div className={styles.body}>
         <h5>

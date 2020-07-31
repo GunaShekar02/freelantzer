@@ -5,10 +5,14 @@ import styles from "./MyApplications.module.css";
 const MyApplications = ({ storage }) => {
   const [address, setAddress] = useState("");
   const renderJobs = storage
-    .filter((job) =>
-      job.args[1].args[0].args[0].args[0].some(
-        (application) => application.args[0].string === address
-      )
+    .filter(
+      (job) =>
+        job.args[1].args[0].args[0].args[0].some(
+          (application) => application.args[0].string === address
+        ) ||
+        job.args[1].args[1].args[1].args[0].some(
+          (selected) => selected.args[0].string === address
+        )
     )
     .map((job) => (
       <div className={styles.job_card}>
@@ -16,18 +20,21 @@ const MyApplications = ({ storage }) => {
         <p>Company : {job.args[1].args[0].args[0].args[1].string}</p>
         <p>Contact : {job.args[1].args[0].args[1].args[0].string}</p>
         <p>
-          Link to Job Description : {job.args[1].args[0].args[1].args[1].string}
+          Link to Job Description :{" "}
+          {job.args[1].args[0].args[1].args[1].args[1].string}
         </p>
-        <p>Owner Address : {job.args[1].args[1].args[0].args[0].string}</p>
+        <p>Owner Address : {job.args[1].args[1].args[0].args[1].string}</p>
         <p>
           Status :{" "}
-          {job.args[1].args[1].args[1].args[0].int == 0
-            ? "Applied"
-            : job.args[1].args[1].args[0].args[1].args[0].string == address
-            ? "Accepted"
-            : "Rejected"}
+          {job.args[1].args[0].args[0].args[0].some(
+            (application) => application.args[0].string === address
+          )
+            ? job.args[1].args[1].args[1].args[1].args[0].int == 1
+              ? "Rejected"
+              : "Applied"
+            : "Accepted"}
         </p>
-        <p>Stipend : {job.args[1].args[1].args[1].args[1].int}mutez</p>
+        <p>Stipend : {job.args[1].args[1].args[1].args[1].args[1].int}mutez</p>
       </div>
     ));
 

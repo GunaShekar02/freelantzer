@@ -22,7 +22,7 @@ var key = require(`../../keystore/${key_name}`);
 var applierKey = require(`../../keystore/${applier}`);
 
 var tezosNode = "https://carthagenet.smartpy.io",
-  contractAddress = "KT1A8cTdb9a81RdQdbEBAv3EjoutQtVVscY5";
+  contractAddress = "KT1UgY1azx3rSTkgafWn6jHQo1VQ2C5Dau9Q";
 
 const ListJobModal = ({ showListJobModal, setListJobModal, setLatestId }) => {
   const [keystore, setKeystore] = useState({
@@ -37,6 +37,7 @@ const ListJobModal = ({ showListJobModal, setListJobModal, setLatestId }) => {
     contact: "",
     jd: "",
     stipend: undefined,
+    maxHires: undefined,
   });
   const [listLoading, setListLoading] = useState(false);
 
@@ -56,16 +57,21 @@ const ListJobModal = ({ showListJobModal, setListJobModal, setLatestId }) => {
 
   //List a job and transfer the stipend amount to the contract
   const listJob = async () => {
-    var amount = jobDetails.stipend,
+    var amount = jobDetails.stipend * jobDetails.maxHires,
       fee = 100000,
       storage_limit = 1000,
       gas_limit = 200000,
       entry_point = undefined,
       parameters = `(Right (Left (Pair (Pair "${jobDetails.company}" "${
         jobDetails.contact
-      }") (Pair "${jobDetails.jd}" "${jobDetails.company
+      }") (Pair "${jobDetails.jd}" (Pair "${jobDetails.company
+        .split("")
         .slice(0, 3)
-        .toUpperCase()}${Math.floor(Date.now() / 1000)}"))))`,
+        .join("")
+        .toUpperCase()}${Math.floor(Date.now() / 1000)}" ${parseInt(
+        jobDetails.maxHires,
+        10
+      )})))))`,
       derivation_path = "";
     setListLoading(true);
     const result = await TezosNodeWriter.sendContractInvocationOperation(
@@ -133,9 +139,16 @@ const ListJobModal = ({ showListJobModal, setListJobModal, setLatestId }) => {
         />
         <input
           type="text"
-          placeholder="Stipend (in mutez)"
+          placeholder="Stipend per hire (in mutez)"
           name="stipend"
           value={jobDetails.stipend}
+          onChange={handleJobDetailsChange}
+        />
+        <input
+          type="text"
+          placeholder="Max number of hires"
+          name="maxHires"
+          value={jobDetails.maxHires}
           onChange={handleJobDetailsChange}
         />
         <button className={styles.button} onClick={listJob}>
@@ -259,39 +272,6 @@ const App = () => {
       );
   }, [latestId]);
 
-  //The functions have been written in the reverse order of their chronological execution.
-
-  //The final step in the process is to transfer the stipend amount from the contract to the selected candidate.
-  const transferStipend = async (_job_id) => {
-    if (!_job_id) return;
-
-    var keystore = key,
-      amount = 0,
-      fee = 100000,
-      storage_limit = 1000,
-      gas_limit = 200000,
-      entry_point = undefined,
-      parameters = `(Right (Right "${_job_id}"))`,
-      derivation_path = "";
-
-    setSubmitLoading(true);
-    const result = await TezosNodeWriter.sendContractInvocationOperation(
-      tezosNode,
-      keystore,
-      contractAddress,
-      amount,
-      fee,
-      derivation_path,
-      storage_limit,
-      gas_limit,
-      entry_point,
-      parameters,
-      TezosParameterFormat.Michelson
-    );
-    setSubmitLoading(false);
-    setLatestId(result.operationGroupID);
-  };
-
   //Get the current contract storage
   const getStorage = async () => {
     const storage = await TezosNodeReader.getContractStorage(
@@ -299,7 +279,25 @@ const App = () => {
       contractAddress
     );
     setStorage(storage);
-    console.log(storage);
+    console.log(JSON.stringify(storage));
+    // const job = storage[0];
+    // console.log("ID : ", job.args[0].string);
+    // console.log("Applications : ", job.args[1].args[0].args[0].args[0]);
+    // console.log("Company : ", job.args[1].args[0].args[0].args[1].string);
+    // console.log("Contact : ", job.args[1].args[0].args[1].args[0].string);
+    // console.log(
+    //   "Cur hires : ",
+    //   job.args[1].args[0].args[1].args[1].args[0].int
+    // );
+    // console.log(
+    //   "Job Description : ",
+    //   job.args[1].args[0].args[1].args[1].args[1].string
+    // );
+    // console.log("Max Hires : ", job.args[1].args[1].args[0].args[0].int);
+    // console.log("Owner : ", job.args[1].args[1].args[0].args[1].string);
+    // console.log("Selected : ", job.args[1].args[1].args[1].args[0]);
+    // console.log("Status : ", job.args[1].args[1].args[1].args[1].args[0].int);
+    // console.log("Stipend : ", job.args[1].args[1].args[1].args[1].args[1].int);
   };
 
   //Fetch the storage everytime the component is mounted
@@ -309,21 +307,24 @@ const App = () => {
 
   //UI for Job Cards
   const renderListings = storage
-    .filter((job) => job.args[1].args[1].args[1].args[0].int == 0)
+    .filter((job) => job.args[1].args[1].args[1].args[1].args[0].int == 0)
     .map((job) => (
       <div className={styles.job_card}>
         <h4>Job ID : {job.args[0].string}</h4>
         <p>Company : {job.args[1].args[0].args[0].args[1].string}</p>
         <p>Contact : {job.args[1].args[0].args[1].args[0].string}</p>
         <p>
-          Link to Job Description : {job.args[1].args[0].args[1].args[1].string}
+          Link to Job Description :{" "}
+          {job.args[1].args[0].args[1].args[1].args[1].string}
         </p>
-        <p>Owner Address : {job.args[1].args[1].args[0].args[0].string}</p>
+        <p>Owner Address : {job.args[1].args[1].args[0].args[1].string}</p>
         <p>
           Status :{" "}
-          {job.args[1].args[1].args[1].args[0].int == 0 ? "Open" : "Closed"}
+          {job.args[1].args[1].args[1].args[1].args[0].int == 0
+            ? "Open"
+            : "Closed"}
         </p>
-        <p>Stipend : {job.args[1].args[1].args[1].args[1].int}mutez</p>
+        <p>Stipend : {job.args[1].args[1].args[1].args[1].args[1].int}mutez</p>
         <button
           className={styles.button}
           onClick={() => {
