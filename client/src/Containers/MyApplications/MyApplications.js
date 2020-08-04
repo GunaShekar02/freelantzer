@@ -1,9 +1,36 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { ThanosWallet } from "@thanos-wallet/dapp";
 
 import styles from "./MyApplications.module.css";
 
+let wallet = undefined,
+  tezos = undefined,
+  freelantzer = undefined;
+
 const MyApplications = ({ storage }) => {
   const [address, setAddress] = useState("");
+
+  const checkWalletConfigurable = async () => {
+    try {
+      await ThanosWallet.isAvailable();
+      wallet = new ThanosWallet("FreelanTZer");
+      console.log(wallet);
+      await wallet.connect("carthagenet");
+      tezos = wallet.toTezos();
+      setAddress(await tezos.wallet.pkh());
+      freelantzer = await tezos.wallet.at(
+        "KT1UgY1azx3rSTkgafWn6jHQo1VQ2C5Dau9Q"
+      );
+      console.log(freelantzer);
+    } catch (e) {
+      console.log(e, "Error");
+    }
+  };
+
+  useEffect(() => {
+    checkWalletConfigurable();
+  }, []);
+
   const renderJobs = storage
     .filter(
       (job) =>
@@ -41,13 +68,7 @@ const MyApplications = ({ storage }) => {
   return (
     <div className={styles.body}>
       {/* <h5>Latest Operations Group ID : {latestId || "No transactions yet!"}</h5> */}
-      <h5>Please enter your account address : </h5>
-      <input
-        type="text"
-        placeholder="Enter Address"
-        className={styles.input}
-        onChange={({ target: { value } }) => setAddress(value)}
-      />
+      <h5>Your account address : {address}</h5>
       <div className={styles.cards_container}>{renderJobs}</div>
     </div>
   );

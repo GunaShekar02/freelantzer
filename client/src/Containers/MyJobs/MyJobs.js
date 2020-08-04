@@ -1,17 +1,13 @@
 import React, { useState, useEffect } from "react";
-import {
-  TezosNodeWriter,
-  TezosParameterFormat,
-  TezosNodeReader,
-  StoreType,
-} from "conseiljs";
+import { ThanosWallet } from "@thanos-wallet/dapp";
 
 import Modal from "../../Components/Modal/Modal";
 
 import styles from "./MyJobs.module.css";
 
-var tezosNode = "https://carthagenet.smartpy.io",
-  contractAddress = "KT1UgY1azx3rSTkgafWn6jHQo1VQ2C5Dau9Q";
+let wallet = undefined,
+  tezos = undefined,
+  freelantzer = undefined;
 
 const HireModal = ({
   showHireModal,
@@ -20,51 +16,21 @@ const HireModal = ({
   jobId,
   candidate,
 }) => {
-  const [keystore, setKeystore] = useState({
-    publicKey: "",
-    privateKey: "",
-    publicKeyHash: "",
-    seed: "",
-    storeType: StoreType.Fundraiser,
-  });
   const [offerLetter, setOfferLetter] = useState("");
   const [hireLoading, setHireLoading] = useState(false);
-
-  const handleKeystoreChange = ({ target: { name, value } }) => {
-    setKeystore({
-      ...keystore,
-      [name]: value,
-    });
-  };
 
   //Hire a particular candidate for a particular job.
   const hire = async () => {
     if (!jobId || !candidate) return;
 
-    var amount = 0,
-      fee = 100000,
-      storage_limit = 1000,
-      gas_limit = 200000,
-      entry_point = undefined,
-      parameters = `(Left (Right (Pair "${candidate}" (Pair "${jobId}" "${offerLetter}"))))`,
-      derivation_path = "";
-
     setHireLoading(true);
-    const result = await TezosNodeWriter.sendContractInvocationOperation(
-      tezosNode,
-      keystore,
-      contractAddress,
-      amount,
-      fee,
-      derivation_path,
-      storage_limit,
-      gas_limit,
-      entry_point,
-      parameters,
-      TezosParameterFormat.Michelson
-    );
+    const operation = await freelantzer.methods
+      .hire(candidate, jobId, offerLetter)
+      .send();
+
+    await operation.confirmation();
     setHireLoading(false);
-    setLatestId(result.operationGroupID);
+    setLatestId(operation.opHash);
     setHireModal(false);
   };
 
@@ -72,27 +38,6 @@ const HireModal = ({
     <Modal show={showHireModal} setShow={setHireModal}>
       <div className={styles.modal_container}>
         <p>You're about to hire : {candidate}</p>
-        <input
-          type="text"
-          placeholder="Public Key"
-          name="publicKey"
-          value={keystore.publicKey}
-          onChange={handleKeystoreChange}
-        />
-        <input
-          type="text"
-          placeholder="Private Key"
-          name="privateKey"
-          value={keystore.privateKey}
-          onChange={handleKeystoreChange}
-        />
-        <input
-          type="text"
-          placeholder="Public Key Hash(Address)"
-          name="publicKeyHash"
-          value={keystore.publicKeyHash}
-          onChange={handleKeystoreChange}
-        />
         <input
           type="text"
           placeholder="Offer Letter Link"
@@ -115,77 +60,26 @@ const TransferModal = ({
   jobId,
   candidate,
 }) => {
-  const [keystore, setKeystore] = useState({
-    publicKey: "",
-    privateKey: "",
-    publicKeyHash: "",
-    seed: "",
-    storeType: StoreType.Fundraiser,
-  });
   const [transferLoading, setTransferLoading] = useState(false);
-
-  const handleKeystoreChange = ({ target: { name, value } }) => {
-    setKeystore({
-      ...keystore,
-      [name]: value,
-    });
-  };
 
   //The final step in the process is to transfer the stipend amount from the contract to the selected candidate.
   const transferStipend = async () => {
     if (!jobId) return;
 
-    var amount = 0,
-      fee = 100000,
-      storage_limit = 1000,
-      gas_limit = 200000,
-      entry_point = undefined,
-      parameters = `(Right (Right (Pair "${candidate}" "${jobId}")))`,
-      derivation_path = "";
-
     setTransferLoading(true);
-    const result = await TezosNodeWriter.sendContractInvocationOperation(
-      tezosNode,
-      keystore,
-      contractAddress,
-      amount,
-      fee,
-      derivation_path,
-      storage_limit,
-      gas_limit,
-      entry_point,
-      parameters,
-      TezosParameterFormat.Michelson
-    );
+    const operation = await freelantzer.methods.submit(candidate, jobId).send();
+
+    await operation.confirmation();
+
     setTransferLoading(false);
-    setLatestId(result.operationGroupID);
+    setLatestId(operation.opHash);
     setTransferModal(false);
   };
 
   return (
     <Modal show={showTransferModal} setShow={setTransferModal}>
       <div className={styles.modal_container}>
-        <input
-          type="text"
-          placeholder="Public Key"
-          name="publicKey"
-          value={keystore.publicKey}
-          onChange={handleKeystoreChange}
-        />
-        <input
-          type="text"
-          placeholder="Private Key"
-          name="privateKey"
-          value={keystore.privateKey}
-          onChange={handleKeystoreChange}
-        />
-        <input
-          type="text"
-          placeholder="Public Key Hash(Address)"
-          name="publicKeyHash"
-          value={keystore.publicKeyHash}
-          onChange={handleKeystoreChange}
-        />
+        <p>You're about to transfer stipend to : {candidate}</p>
         <button className={styles.button} onClick={transferStipend}>
           {transferLoading ? "Loading..." : "Transfer Stipend"}
         </button>
@@ -207,6 +101,27 @@ const MyJobs = ({ storage }) => {
     jobId: "",
     candidate: "",
   });
+
+  const checkWalletConfigurable = async () => {
+    try {
+      await ThanosWallet.isAvailable();
+      wallet = new ThanosWallet("FreelanTZer");
+      console.log(wallet);
+      await wallet.connect("carthagenet");
+      tezos = wallet.toTezos();
+      setAddress(await tezos.wallet.pkh());
+      freelantzer = await tezos.wallet.at(
+        "KT1UgY1azx3rSTkgafWn6jHQo1VQ2C5Dau9Q"
+      );
+      console.log(freelantzer);
+    } catch (e) {
+      console.log(e, "Error");
+    }
+  };
+
+  useEffect(() => {
+    checkWalletConfigurable();
+  }, []);
 
   useEffect(() => {
     if (latestId)
@@ -303,13 +218,8 @@ const MyJobs = ({ storage }) => {
         <h5>
           Latest Operations Group ID : {latestId || "No transactions yet!"}
         </h5>
-        <h5>Please enter your account address : </h5>
-        <input
-          type="text"
-          placeholder="Enter Address"
-          className={styles.input}
-          onChange={({ target: { value } }) => setAddress(value)}
-        />
+        <h5>Your account address : {address}</h5>
+
         <div className={styles.cards_container}>{renderListings}</div>
       </div>
     </>
